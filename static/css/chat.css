@@ -1,0 +1,234 @@
+/* RESET ──────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #fff;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    color: #1d1d1f
+}
+
+/* HEADER ─────────────────────────────────────────────── */
+.header {
+    text-align: center;
+    padding: 24px 0
+}
+
+.logo-full {
+    width: 230px;
+    max-width: 60vw
+}
+
+/* BG SIGN ────────────────────────────────────────────── */
+.chat-shell {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    position: relative
+}
+
+.bg-mark {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    /* максимальная высота = высота окна - отступ сверху - отступ снизу  */
+    --safe-gap: 200px; /* ← отступ и сверху, и снизу */
+    max-height: calc(80vh - var(--safe-gap));
+    width: auto; /* сохраняем пропорции */
+    max-width: 80vw;
+    opacity: .9;
+    pointer-events: none;
+}
+
+/* CONTAINER ─────────────────────────────────────────── */
+.chat-box {
+    width: 100%;
+    max-width: 720px;
+    padding: 0 24px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+    z-index: 1
+}
+
+/* WELCOME (strict center) ───────────────────────────── */
+.welcome {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 540px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+    z-index: 2
+}
+
+.welcome h2 {
+    font: 700 30px/1.2 'Inter'
+}
+
+/* chips / suggestions --------------------------------- */
+.chips, .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    list-style: none
+}
+
+.chip, .suggestion {
+    background: #5d2eff;
+    color: #fff;
+    font: 500 13px 'Inter';
+    padding: 10px 20px;
+    border-radius: 18px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color .2s
+}
+
+.chip:hover, .suggestion:hover {
+    background: #4a1fff
+}
+
+/* FLOW ──────────────────────────────────────────────── */
+.chat-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    max-height: calc(100vh - 330px);
+    scrollbar-width: none;
+}
+
+.chat-flow::-webkit-scrollbar {
+    display: none
+}
+
+.bubble {
+    max-width: 85%;
+    padding: 18px 24px;
+    font-size: 15px;
+    line-height: 1.45;
+    border-radius: 20px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.bubble.user {
+    align-self: flex-end;
+    background: #5d2eff;
+    color: #fff
+}
+
+.bubble.bot {
+    align-self: flex-start;
+    background: #ff6b35;
+    color: #fff
+}
+
+/* STATUS ────────────────────────────────────────────── */
+.status-line {
+    font: 500 14px 'Inter';
+    color: #767676;
+    text-align: left;
+    margin-left: 20px;
+}
+
+/* INPUT FORM ────────────────────────────────────────── */
+.chat-form {
+    display: flex;
+    align-items: center;
+    border: 1px solid #c4c4c4;
+    border-radius: 20px;
+    background: #fff;
+    padding: 10px 12px
+}
+
+.chat-form input {
+    flex: 1;
+    padding: 16px 20px;
+    font-size: 16px;
+    border: none;
+    outline: none
+}
+
+.chat-form.invalid{
+    border-color:#e44b4b;
+    box-shadow:0 0 0 2px rgba(228,75,75,.25);
+}
+/* чтобы рамка краснела и при фокусе */
+.chat-form.invalid input:focus{
+    outline:none;
+}
+
+/* SEND BUTTON (square) -------------------------------- */
+.send-btn {
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+    background: #5d2eff;
+    border: none;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .2s;
+    position: relative;
+}
+
+.send-btn:hover {
+    background: #4a1fff
+}
+
+.send-btn:active {
+    transform: scale(.96)
+}
+
+.arrow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-75%, -50%) rotate(-45deg);
+    width: 14px;
+    height: 14px; /* меньше */
+    border-right: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+}
+
+/* UTILS / ADAPTIVE ──────────────────────────────────── */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0)
+}
+
+@media (max-width: 600px) {
+    .bubble {
+        max-width: 95%
+    }
+
+    .send-btn {
+        width: 42px;
+        min-width: 42px;
+        height: 42px
+    }
+}
