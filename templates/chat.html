@@ -1,0 +1,277 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>FAQ чат-бот</title>
+
+    <link rel="stylesheet" href="{% static 'css/chat.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<header class="header">
+    <img src="{% static 'images/tg_image_2301118405.png' %}" alt="Логотип" class="logo-full">
+</header>
+
+<main class="chat-shell">
+    <img src="{% static 'images/tg_image_1569966856.png' %}" alt="" class="bg-mark">
+
+    <div class="chat-box">
+        <!-- ─── приветствие (центр экрана) ─── -->
+        <section id="welcome" class="welcome">
+            <h2>Чем могу помочь?</h2>
+            <ul class="chips">
+                <li class="chip">Как зарегистрироваться в Личном кабинете?</li>
+                <li class="chip">Как подключить домашний интернет?</li>
+                <li class="chip">Какие тарифы на домашнюю телефонную связь?</li>
+                <li class="chip">Сколько стоит подключение интерактивного ТВ?</li>
+            </ul>
+        </section>
+
+        <!-- ─── поток сообщений ─── -->
+        <div id="chat" class="chat-flow"></div>
+
+        <!-- ─── серый статус ─── -->
+        <div id="status" class="status-line" hidden>Бот отвечает…</div>
+
+        <!-- ─── форма ввода ─── -->
+        <form id="chat-form" class="chat-form" autocomplete="off" novalidate>
+            {% csrf_token %}
+            <label for="message" class="visually-hidden">Введите сообщение</label>
+            <input id="message" name="message" type="text" placeholder="Введите сообщение…" required>
+            <button type="submit" class="send-btn" aria-label="Отправить"><span class="arrow"></span></button>
+        </form>
+    </div>
+</main>
+
+<script>
+    (() => {
+        const chat = document.getElementById('chat');
+        const form = document.getElementById('chat-form');
+        const input = document.getElementById('message');
+        const welcome = document.getElementById('welcome');
+        const statusEl = document.getElementById('status');
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        // Генерация UUID v4 на стороне клиента
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Получаем или создаем chatId
+        let chatId = localStorage.getItem('chat_id');
+        console.log(chatId);
+        if (!chatId) {
+            chatId = generateUUID();
+            localStorage.setItem('chat_id', chatId);
+        }
+        console.log(chatId);
+
+        let socket = null;
+        let operatorMode = false;
+
+        const scrollBottom = () => chat.scrollTop = chat.scrollHeight;
+
+        const bubble = (txt, side) => {
+            const div = document.createElement('div');
+            div.className = `bubble ${side}`;
+            div.textContent = txt;
+            return div;
+        };
+
+        const suggestions = arr => {
+            const ul = document.createElement('ul');
+            ul.className = 'suggestions';
+            arr.slice(0, 5).forEach(t => {
+                const li = document.createElement('li');
+                li.className = 'suggestion';
+                li.textContent = t;
+                li.onclick = () => {
+                    input.value = t;
+                    form.dispatchEvent(new Event('submit'));
+                };
+                ul.appendChild(li);
+            });
+            return ul;
+        };
+
+        const connectWebSocket = (id) => {
+            if (socket) {
+                socket.close();
+            }
+
+            socket = new WebSocket(`ws://${window.location.host}/ws/chat/${id}/`);
+
+            socket.onopen = () => {
+                console.log('WebSocket connected');
+                statusEl.hidden = true;
+            };
+
+            socket.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+
+                if (data.role === 'assistant') {
+                    chat.appendChild(bubble(data.message, 'bot'));
+                    scrollBottom();
+                    statusEl.hidden = true;
+                }
+            };
+
+            socket.onclose = () => {
+                console.log('WebSocket disconnected');
+                if (operatorMode) {
+                    chat.appendChild(bubble('Соединение с оператором потеряно. Перезагрузите страницу для нового подключения.', 'bot'));
+                    scrollBottom();
+                }
+            };
+        };
+
+        // Функция для загрузки истории чата с сервера
+        const loadChatHistory = async () => {
+            try {
+                statusEl.hidden = false;
+                statusEl.textContent = 'Загрузка истории...';
+
+                const res = await fetch(`/chat/${chatId}/history/`, {
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                    },
+                    credentials: 'same-origin',
+                });
+
+                if (!res.ok) {
+                    // Если чат не найден, возможно ID устарел
+                    if (res.status === 404) {
+                        // Создаем новый ID
+                        chatId = generateUUID();
+                        localStorage.setItem('chat_id', chatId);
+                        statusEl.hidden = true;
+                        return;
+                    }
+                    throw new Error('Server error');
+                }
+
+                const data = await res.json();
+
+                // Если есть история, скрываем приветственный экран
+                if (data.messages && data.messages.length > 0) {
+                    welcome?.remove();
+
+                    // Отображаем все сообщения из истории
+                    data.messages.forEach(msg => {
+                        const side = msg.role === 'user' ? 'user' : 'bot';
+                        chat.appendChild(bubble(msg.content, side));
+                    });
+
+                    // Проверяем статус чата (с ботом или оператором)
+                    if (data.bot_active === false) {
+                        operatorMode = true;
+                        // Подключаемся к WebSocket для чата с оператором
+                        connectWebSocket(chatId);
+                    }
+
+                    scrollBottom();
+                }
+
+                statusEl.hidden = true;
+            } catch (error) {
+                console.error('Error loading chat history:', error);
+                statusEl.hidden = true;
+            }
+        };
+
+        loadChatHistory();
+
+        input.addEventListener('input', () => {
+            if (form.classList.contains('invalid')) {
+                form.classList.remove('invalid');
+            }
+        });
+
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+            const text = input.value.trim();
+
+            if (!text) {
+                form.classList.add('invalid');
+                return;
+            }
+            form.classList.remove('invalid');
+
+            welcome?.remove();
+            document.querySelector('.suggestions')?.remove();
+
+            chat.appendChild(bubble(text, 'user'));
+            scrollBottom();
+            input.value = '';
+
+            statusEl.hidden = false;
+
+            if (operatorMode && socket && socket.readyState === WebSocket.OPEN) {
+                // Отправляем сообщение через WebSocket в режиме оператора
+                socket.send(JSON.stringify({
+                    message: text,
+                    role: 'user'
+                }));
+                statusEl.textContent = "Ожидайте ответа оператора...";
+            } else {
+                // Если мы не в режиме оператора, используем обычный HTTP запрос
+                try {
+                    statusEl.textContent = "Бот отвечает…";
+                    const res = await fetch('/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken,
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({
+                            message: text,
+                            chat_id: chatId
+                        })
+                    });
+                    const data = await res.json();
+
+                    // Проверяем, нужно ли переключиться в режим оператора
+                    if (data.operator_mode && !operatorMode) {
+                        operatorMode = true;
+                        // Отображаем сообщение о переключении на оператора в статусной строке
+                        statusEl.textContent = "Ожидайте ответа оператора...";
+                        statusEl.hidden = false;
+                        // Подключаемся к WebSocket
+                        connectWebSocket(chatId);
+                        // Если в ответе есть сообщение - показываем его
+                        if (data.reply) {
+                            chat.appendChild(bubble(data.reply, 'bot'));
+                        }
+                    } else {
+                        // Стандартный ответ бота
+                        statusEl.hidden = true;
+                        if (data.reply) {
+                            chat.appendChild(bubble(data.reply, 'bot'));
+                        }
+                        if (data.suggestions && data.suggestions.length > 0) {
+                            chat.appendChild(suggestions(data.suggestions));
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    statusEl.hidden = true;
+                    chat.appendChild(bubble('Сервис временно недоступен', 'bot'));
+                }
+            }
+            scrollBottom();
+        });
+
+        // стартовые чипсы
+        document.querySelectorAll('.chip').forEach(c => c.onclick = () => {
+            input.value = c.textContent;
+            form.dispatchEvent(new Event('submit'));
+        });
+    })();
+</script>
+</body>
+</html>
