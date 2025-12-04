@@ -1,0 +1,708 @@
+{% extends 'admin/base.html' %}
+{% load static %}
+
+{% block title %}База знаний - Админ-панель{% endblock %}
+
+{% block extra_css %}
+    <style>
+        .knowledge-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .add-item-btn {
+            display: flex;
+            align-items: center;
+        }
+
+        .add-item-btn i {
+            margin-right: 8px;
+        }
+
+        .table td {
+            vertical-align: middle;
+        }
+
+        .questions-list {
+            max-width: 400px;
+        }
+
+        .question-item {
+            margin-bottom: 5px;
+            border-radius: 5px;
+            padding: 5px 10px;
+            background-color: #f5f5f7;
+            font-size: 14px;
+        }
+
+        .empty-state {
+            padding: 40px 20px;
+            text-align: center;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .empty-state-icon {
+            font-size: 40px;
+            color: #ddd;
+            margin-bottom: 15px;
+        }
+
+        .empty-state-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .empty-state-text {
+            color: #999;
+            margin-bottom: 20px;
+        }
+
+        /* Стили для модальных окон редактирования базы знаний */
+        .edit-knowledge-section {
+            margin-bottom: 25px;
+        }
+
+        .edit-knowledge-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .questions-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .question-row {
+            display: flex;
+        }
+
+        .question-row .form-control {
+            flex: 1;
+        }
+
+        .question-row .btn-icon {
+            margin-left: 10px;
+        }
+
+        .add-question-btn {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+            background: none;
+            border: none;
+            color: #5d2eff;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 5px 0;
+        }
+
+        .add-question-btn i {
+            margin-right: 8px;
+        }
+
+        .add-question-btn:hover {
+            text-decoration: underline;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <h1 class="page-title">База знаний</h1>
+
+    <div class="knowledge-header">
+        <h2 class="card-title">Управление базой знаний</h2>
+        <button class="btn btn-primary add-item-btn" onclick="openModal('add-knowledge-modal')">
+            <i class="fas fa-plus"></i> Добавить запись
+        </button>
+    </div>
+
+    <div class="card">
+        <div class="table-container">
+            <table class="table" id="knowledge-table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Вопрос</th>
+                    <th>Ответ</th>
+                    <th>Связанные вопросы</th>
+                    <th>Действия</th>
+                </tr>
+                </thead>
+                <tbody id="knowledge-list">
+                <!-- Данные будут загружены с помощью JavaScript -->
+                <tr>
+                    <td colspan="5" class="text-center">Загрузка...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Пагинация -->
+        <ul class="pagination" id="pagination">
+            <!-- Ссылки будут добавлены с помощью JavaScript -->
+        </ul>
+    </div>
+
+    <!-- Модальное окно добавления записи в базу знаний -->
+    <div class="modal-overlay" id="add-knowledge-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Добавить запись в базу знаний</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="add-knowledge-form">
+                    <div class="edit-knowledge-section">
+                        <h4 class="edit-knowledge-title">Вопросы:</h4>
+                        <div class="questions-container" id="add-questions-container">
+                            <div class="question-row">
+                                <input type="text" class="form-control" placeholder="Введите вопрос">
+                                <button type="button" class="btn btn-icon btn-danger" onclick="removeQuestion(this)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="button" class="add-question-btn" onclick="addQuestion('add-questions-container')">
+                            <i class="fas fa-plus"></i> Добавить вопрос
+                        </button>
+                    </div>
+
+                    <div class="edit-knowledge-section">
+                        <h4 class="edit-knowledge-title">Ответ:</h4>
+                        <textarea class="form-control" id="add-answer" rows="6" placeholder="Введите ответ"></textarea>
+                    </div>
+
+                    <div class="edit-knowledge-section">
+                        <h4 class="edit-knowledge-title">Похожие вопросы:</h4>
+                        <div class="questions-container" id="add-related-questions-container">
+                            <div class="question-row">
+                                <input type="text" class="form-control" placeholder="Введите похожий вопрос">
+                                <button type="button" class="btn btn-icon btn-danger" onclick="removeQuestion(this)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="button" class="add-question-btn"
+                                onclick="addQuestion('add-related-questions-container')">
+                            <i class="fas fa-plus"></i> Добавить похожий вопрос
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+                <button class="btn btn-primary" id="add-knowledge-submit">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно редактирования записи в базе знаний -->
+    <div class="modal-overlay" id="edit-knowledge-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Редактировать запись базы знаний</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-knowledge-form">
+                    <input type="hidden" id="edit-knowledge-id">
+
+                    <div class="edit-knowledge-section">
+                        <h4 class="edit-knowledge-title">Вопросы:</h4>
+                        <div class="questions-container" id="edit-questions-container">
+                            <!-- Вопросы будут добавлены динамически -->
+                        </div>
+                        <button type="button" class="add-question-btn"
+                                onclick="addQuestion('edit-questions-container')">
+                            <i class="fas fa-plus"></i> Добавить вопрос
+                        </button>
+                    </div>
+
+                    <div class="edit-knowledge-section">
+                        <h4 class="edit-knowledge-title">Ответ:</h4>
+                        <textarea class="form-control" id="edit-answer" rows="6" placeholder="Введите ответ"></textarea>
+                    </div>
+
+                    <div class="edit-knowledge-section">
+                        <h4 class="edit-knowledge-title">Похожие вопросы:</h4>
+                        <div class="questions-container" id="edit-related-questions-container">
+                            <!-- Связанные вопросы будут добавлены динамически -->
+                        </div>
+                        <button type="button" class="add-question-btn"
+                                onclick="addQuestion('edit-related-questions-container')">
+                            <i class="fas fa-plus"></i> Добавить похожий вопрос
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+                <button class="btn btn-primary" id="edit-knowledge-submit">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно подтверждения удаления -->
+    <div class="modal-overlay" id="delete-confirm-modal">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Подтверждение удаления</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите удалить эту запись из базы знаний?</p>
+                <p>Это действие нельзя будет отменить.</p>
+                <input type="hidden" id="delete-knowledge-id">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+                <button class="btn btn-danger" id="delete-knowledge-submit">Удалить</button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+
+        // Функция для добавления поля вопроса
+        function addQuestion(containerId) {
+            const container = document.getElementById(containerId);
+            const questionRow = document.createElement('div');
+            questionRow.className = 'question-row';
+            questionRow.innerHTML = `
+            <input type="text" class="form-control" placeholder="Введите вопрос">
+            <button type="button" class="btn btn-icon btn-danger" onclick="removeQuestion(this)">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+            container.appendChild(questionRow);
+        }
+
+        // Функция для удаления поля вопроса
+        function removeQuestion(button) {
+            const row = button.closest('.question-row');
+            row.remove();
+        }
+
+        // Функция для загрузки записей базы знаний
+        async function loadKnowledgeBase(page = 1) {
+            try {
+                const knowledgeList = document.getElementById('knowledge-list');
+                knowledgeList.innerHTML = '<tr><td colspan="5" class="text-center">Загрузка...</td></tr>';
+
+                const response = await fetch(`/admin/api/knowledge/?page=${page}`);
+                const data = await response.json();
+
+                if (data.items && data.items.length > 0) {
+                    knowledgeList.innerHTML = '';
+
+                    // В функции loadKnowledgeBase, когда заполняем таблицу
+                    data.items.forEach(item => {
+                        // Форматируем основные вопросы для отображения в таблице
+                        let questionHtml = '';
+                        if (item.question && item.question.length > 0) {
+                            questionHtml = item.question
+                                .slice(0, 2) // Показываем только первые 2 вопроса
+                                .map(q => `<div class="question-item">${q}</div>`)
+                                .join('');
+
+                            if (item.question.length > 2) {
+                                questionHtml += `<div class="question-item">и ещё ${item.question.length - 2}...</div>`;
+                            }
+                        } else {
+                            questionHtml = '<em>Нет вопросов</em>';
+                        }
+
+                        // Ограничиваем длину ответа для отображения в таблице
+                        const shortAnswer = item.answer.length > 100 ? item.answer.substring(0, 100) + '...' : item.answer;
+
+                        // Форматируем связанные вопросы
+                        let relatedQuestionsHtml = '';
+                        if (item.related_questions && item.related_questions.length > 0) {
+                            relatedQuestionsHtml = item.related_questions
+                                .slice(0, 2) // Показываем только первые 2 вопроса
+                                .map(q => `<div class="question-item">${q}</div>`)
+                                .join('');
+
+                            if (item.related_questions.length > 2) {
+                                relatedQuestionsHtml += `<div class="question-item">и ещё ${item.related_questions.length - 2}...</div>`;
+                            }
+                        } else {
+                            relatedQuestionsHtml = '<em>Нет связанных вопросов</em>';
+                        }
+
+                        knowledgeList.innerHTML += `
+        <tr>
+            <td>${item.id}</td>
+            <td class="questions-list">${questionHtml}</td>
+            <td>${shortAnswer}</td>
+            <td class="questions-list">${relatedQuestionsHtml}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn btn-icon btn-secondary" title="Редактировать" onclick="editKnowledgeItem(${item.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-icon btn-danger" title="Удалить" onclick="confirmDeleteItem(${item.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+                    });
+
+                    // Обновляем пагинацию
+                    updatePagination(data.pagination);
+                } else {
+                    knowledgeList.innerHTML = `
+                    <tr>
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">
+                                    <i class="fas fa-book"></i>
+                                </div>
+                                <h4 class="empty-state-title">База знаний пуста</h4>
+                                <p class="empty-state-text">Добавьте записи, чтобы помочь пользователям получать ответы на частые вопросы.</p>
+                                <button class="btn btn-primary" onclick="openModal('add-knowledge-modal')">
+                                    <i class="fas fa-plus"></i> Добавить запись
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+
+                    // Скрываем пагинацию
+                    document.getElementById('pagination').innerHTML = '';
+                }
+
+                currentPage = page;
+                totalPages = data.pagination ? data.pagination.total_pages : 1;
+            } catch (error) {
+                console.error('Error loading knowledge base:', error);
+                showNotification('error', 'Ошибка', 'Не удалось загрузить базу знаний');
+            }
+        }
+
+        // Функция для обновления пагинации
+        function updatePagination(pagination) {
+            const paginationElement = document.getElementById('pagination');
+            paginationElement.innerHTML = '';
+
+            if (!pagination || pagination.total_pages <= 1) {
+                return;
+            }
+
+            // Кнопка "Предыдущая"
+            if (pagination.current_page > 1) {
+                paginationElement.innerHTML += `
+                <li class="pagination-item">
+                    <a href="#" class="pagination-link" onclick="loadKnowledgeBase(${pagination.current_page - 1}); return false;">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+            }
+
+            // Номера страниц
+            for (let i = 1; i <= pagination.total_pages; i++) {
+                // Если страниц много, показываем только ближайшие
+                if (
+                    i === 1 ||
+                    i === pagination.total_pages ||
+                    (i >= pagination.current_page - 1 && i <= pagination.current_page + 1)
+                ) {
+                    paginationElement.innerHTML += `
+                    <li class="pagination-item">
+                        <a href="#" class="pagination-link ${i === pagination.current_page ? 'active' : ''}"
+                           onclick="loadKnowledgeBase(${i}); return false;">
+                            ${i}
+                        </a>
+                    </li>
+                `;
+                } else if (
+                    i === pagination.current_page - 2 ||
+                    i === pagination.current_page + 2
+                ) {
+                    // Многоточие для пропущенных страниц
+                    paginationElement.innerHTML += `
+                    <li class="pagination-item">
+                        <span class="pagination-link">...</span>
+                    </li>
+                `;
+                }
+            }
+
+            // Кнопка "Следующая"
+            if (pagination.current_page < pagination.total_pages) {
+                paginationElement.innerHTML += `
+                <li class="pagination-item">
+                    <a href="#" class="pagination-link" onclick="loadKnowledgeBase(${pagination.current_page + 1}); return false;">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            `;
+            }
+        }
+
+        // Функция для редактирования записи
+        function editKnowledgeItem(id) {
+            // Загружаем данные записи
+            fetch(`/admin/api/knowledge/${id}/`)
+                .then(response => response.json())
+                .then(item => {
+                    // Заполняем форму редактирования
+                    // Заполняем форму редактирования
+                    document.getElementById('edit-knowledge-id').value = item.id;
+                    document.getElementById('edit-answer').value = item.answer;
+
+// Очищаем и заполняем контейнеры вопросов
+                    const questionsContainer = document.getElementById('edit-questions-container');
+                    const relatedQuestionsContainer = document.getElementById('edit-related-questions-container');
+
+                    questionsContainer.innerHTML = '';
+                    relatedQuestionsContainer.innerHTML = '';
+
+// Добавляем основные вопросы
+                    if (item.question && item.question.length > 0) {
+                        item.question.forEach(question => {
+                            const questionRow = document.createElement('div');
+                            questionRow.className = 'question-row';
+                            questionRow.innerHTML = `
+            <input type="text" class="form-control" value="${question}" placeholder="Введите вопрос">
+            <button type="button" class="btn btn-icon btn-danger" onclick="removeQuestion(this)">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+                            questionsContainer.appendChild(questionRow);
+                        });
+                    } else {
+                        // Если вопросов нет, добавляем пустое поле
+                        const questionRow = document.createElement('div');
+                        questionRow.className = 'question-row';
+                        questionRow.innerHTML = `
+        <input type="text" class="form-control" placeholder="Введите вопрос">
+        <button type="button" class="btn btn-icon btn-danger" onclick="removeQuestion(this)">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+                        questionsContainer.appendChild(questionRow);
+                    }
+
+// Добавляем связанные вопросы
+                    if (item.related_questions && item.related_questions.length > 0) {
+                        item.related_questions.forEach(relatedQuestion => {
+                            const relatedQuestionRow = document.createElement('div');
+                            relatedQuestionRow.className = 'question-row';
+                            relatedQuestionRow.innerHTML = `
+            <input type="text" class="form-control" value="${relatedQuestion}" placeholder="Введите похожий вопрос">
+            <button type="button" class="btn btn-icon btn-danger" onclick="removeQuestion(this)">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+                            relatedQuestionsContainer.appendChild(relatedQuestionRow);
+                        });
+                    } else {
+                        // Если связанных вопросов нет, добавляем пустое поле
+                        const relatedQuestionRow = document.createElement('div');
+                        relatedQuestionRow.className = 'question-row';
+                        relatedQuestionRow.innerHTML = `
+        <input type="text" class="form-control" placeholder="Введите похожий вопрос">
+        <button type="button" class="btn btn-icon btn-danger" onclick="removeQuestion(this)">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+                        relatedQuestionsContainer.appendChild(relatedQuestionRow);
+                    }
+
+                    // Открываем модальное окно
+                    openModal('edit-knowledge-modal');
+                })
+                .catch(error => {
+                    console.error('Error fetching knowledge item:', error);
+                    showNotification('error', 'Ошибка', 'Не удалось загрузить данные записи');
+                });
+        }
+
+        // Функция подтверждения удаления
+        function confirmDeleteItem(id) {
+            document.getElementById('delete-knowledge-id').value = id;
+            openModal('delete-confirm-modal');
+        }
+
+        // Функция сбора данных из формы
+        function collectFormData(questionsContainerId, answerElementId, relatedQuestionsContainerId) {
+            // Получаем основные вопросы
+            const questionsElements = document.querySelectorAll(`#${questionsContainerId} input`);
+            const questions = Array.from(questionsElements).map(el => el.value.trim()).filter(q => q);
+
+            // Получаем ответ
+            const answer = document.getElementById(answerElementId).value.trim();
+
+            // Получаем связанные вопросы
+            const relatedQuestionsElements = document.querySelectorAll(`#${relatedQuestionsContainerId} input`);
+            const relatedQuestions = Array.from(relatedQuestionsElements).map(el => el.value.trim()).filter(q => q);
+
+            return {
+                question: questions,
+                answer,
+                related_questions: relatedQuestions
+            };
+        }
+
+        // Загружаем базу знаний при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function () {
+            loadKnowledgeBase();
+
+            // Обработчик добавления новой записи
+            document.getElementById('add-knowledge-submit').addEventListener('click', async function () {
+                // Собираем данные формы
+                const formData = collectFormData(
+                    'add-questions-container',
+                    'add-answer',
+                    'add-related-questions-container'
+                );
+
+                // Проверяем обязательные поля
+                if (!formData.question || !formData.answer) {
+                    showNotification('error', 'Ошибка', 'Пожалуйста, заполните вопрос и ответ');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/admin/api/knowledge/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showNotification('success', 'Успех', 'Запись успешно добавлена в базу знаний');
+                        closeModal('add-knowledge-modal');
+
+                        // Сбрасываем форму
+                        document.getElementById('add-questions-container').innerHTML = `
+                        <div class="question-row">
+                            <input type="text" class="form-control" placeholder="Введите вопрос">
+                            <button type="button" class="btn btn-icon btn-danger" onclick="removeQuestion(this)">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                        document.getElementById('add-answer').value = '';
+                        document.getElementById('add-related-questions-container').innerHTML = `
+                        <div class="question-row">
+                            <input type="text" class="form-control" placeholder="Введите похожий вопрос">
+                            <button type="button" class="btn btn-icon btn-danger" onclick="removeQuestion(this)">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+
+                        // Перезагружаем базу знаний
+                        loadKnowledgeBase();
+                    } else {
+                        showNotification('error', 'Ошибка', data.error || 'Не удалось добавить запись');
+                    }
+                } catch (error) {
+                    console.error('Error adding knowledge item:', error);
+                    showNotification('error', 'Ошибка', 'Не удалось добавить запись');
+                }
+            });
+
+            // Обработчик обновления записи
+            document.getElementById('edit-knowledge-submit').addEventListener('click', async function () {
+                const id = document.getElementById('edit-knowledge-id').value;
+
+                // Собираем данные формы
+                const formData = collectFormData(
+                    'edit-questions-container',
+                    'edit-answer',
+                    'edit-related-questions-container'
+                );
+
+                // Проверяем обязательные поля
+                if (!formData.question || !formData.answer) {
+                    showNotification('error', 'Ошибка', 'Пожалуйста, заполните вопрос и ответ');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/admin/api/knowledge/${id}/`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showNotification('success', 'Успех', 'Запись успешно обновлена');
+                        closeModal('edit-knowledge-modal');
+
+                        // Перезагружаем базу знаний
+                        loadKnowledgeBase(currentPage);
+                    } else {
+                        showNotification('error', 'Ошибка', data.error || 'Не удалось обновить запись');
+                    }
+                } catch (error) {
+                    console.error('Error updating knowledge item:', error);
+                    showNotification('error', 'Ошибка', 'Не удалось обновить запись');
+                }
+            });
+
+            // Обработчик удаления записи
+            document.getElementById('delete-knowledge-submit').addEventListener('click', async function () {
+                const id = document.getElementById('delete-knowledge-id').value;
+
+                try {
+                    const response = await fetch(`/admin/api/knowledge/${id}/`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showNotification('success', 'Успех', 'Запись успешно удалена');
+                        closeModal('delete-confirm-modal');
+
+                        // Перезагружаем базу знаний
+                        // Если это была последняя запись на странице, переходим на предыдущую
+                        const itemsOnCurrentPage = document.querySelectorAll('#knowledge-list tr').length;
+                        if (itemsOnCurrentPage === 1 && currentPage > 1) {
+                            loadKnowledgeBase(currentPage - 1);
+                        } else {
+                            loadKnowledgeBase(currentPage);
+                        }
+                    } else {
+                        showNotification('error', 'Ошибка', data.error || 'Не удалось удалить запись');
+                    }
+                } catch (error) {
+                    console.error('Error deleting knowledge item:', error);
+                    showNotification('error', 'Ошибка', 'Не удалось удалить запись');
+                }
+            });
+        });
+    </script>
+{% endblock %}
