@@ -1,0 +1,144 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Вход для администраторов</title>
+    <link rel="stylesheet" href="{% static 'css/chat.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .login-container {
+            max-width: 400px;
+            margin: 80px auto;
+            padding: 30px;
+            border-radius: 20px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .login-container h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+            font-size: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #444;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        .form-group input:focus {
+            border-color: #ff6b35;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .submit-btn:hover {
+            background: #e65a26;
+        }
+
+        .error-message {
+            color: #e44b4b;
+            font-size: 14px;
+            margin-top: 5px;
+            text-align: center;
+            padding: 10px;
+            background: rgba(228, 75, 75, 0.1);
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-container img {
+            max-width: 180px;
+        }
+
+        body {
+            background-color: #f8f8f8;
+        }
+
+        .login-links {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .login-links a {
+            color: #ff6b35;
+            text-decoration: none;
+        }
+
+        .login-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo-container">
+            <img src="{% static 'images/tg_image_2301118405.png' %}" alt="Логотип">
+        </div>
+
+        <h2>Вход для администраторов</h2>
+
+        {% if form.errors %}
+        <div class="error-message">
+            Неверное имя пользователя или пароль. Пожалуйста, попробуйте снова.
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'login_admin' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="id_username">Имя пользователя</label>
+                <input type="text" name="username" id="id_username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="id_password">Пароль</label>
+                <input type="password" name="password" id="id_password" required>
+            </div>
+
+            <input type="hidden" name="next" value="{{ next }}">
+            <button type="submit" class="submit-btn">Войти</button>
+        </form>
+
+        <div class="login-links">
+            <a href="{% url 'login_operator' %}">Вход для операторов</a>
+        </div>
+    </div>
+</body>
+</html>
