@@ -92,9 +92,18 @@ DATABASES = {
         "CONN_MAX_AGE": 60,
         "OPTIONS": {
             "client_encoding": "UTF8"
-        }
+        },
+        "TEST": {
+            "NAME": os.getenv("DATABASE_TEST_NAME", None),
+        },
     }
 }
+
+if os.getenv("TEST_USE_SQLITE") == "1":
+    DATABASES["default"] = {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -158,10 +167,25 @@ ADMIN_REDIRECT_URL = '/admin/'  # Куда идет админ после вхо
 # Глобальный выход
 LOGOUT_REDIRECT_URL = '/login/'  # URL для перенаправления после выхода из системы
 
-assistant = Assistant()
 QDRANT_HOST = os.getenv("QDRANT_HOST", "qdrant")
 QDRANT_PORT = os.getenv("QDRANT_PORT", "6333")
 QDRANT_URL = os.getenv("QDRANT_URL", f"http://{QDRANT_HOST}:{QDRANT_PORT}")
+QDRANT_IN_MEMORY = os.getenv("QDRANT_IN_MEMORY") == "1"
 
-QDRANT = QdrantClient(url=QDRANT_URL)
+QDRANT = QdrantClient(":memory:") if QDRANT_IN_MEMORY else QdrantClient(url=QDRANT_URL)
 COLLECTION = os.getenv("QDRANT_COLLECTION", "que")
+
+USE_FAKE_ASSISTANT = os.getenv("USE_FAKE_ASSISTANT") == "1"
+
+class DummyAssistant:
+    async def __call__(self, message, max_related=5):
+        return Assistant.Response(answer=f"stub: {message}", related_questions=[])
+
+    async def answers(self, message):
+        return []
+
+    async def get_embedding(self, message):
+        return [0.0, 0.0, 0.0]
+
+
+assistant = DummyAssistant() if USE_FAKE_ASSISTANT else Assistant()
