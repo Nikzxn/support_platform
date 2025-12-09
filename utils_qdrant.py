@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 from pathlib import Path
 
@@ -9,11 +8,17 @@ from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from assistant import Assistant
 
-qdrant_host = os.getenv("QDRANT_HOST", "qdrant")
+qdrant_host = os.getenv("QDRANT_HOST", "localhost")
 qdrant_port = os.getenv("QDRANT_PORT", "6333")
 qdrant_url = os.getenv("QDRANT_URL", f"http://{qdrant_host}:{qdrant_port}")
 
 qdrant = QdrantClient(url=qdrant_url)
+
+os.environ.setdefault(
+    "GIGATOKEN",
+    "OWZiNzRmNzItYTM4YS00ZjdhLTgzOGQtMTQ0ODg4YmVjNzU0OmIwNzVjNzFmLTlhNzgtNDkxOC04Y2U4LTFlOWQzNDY4MDNlZQ=="
+)
+
 assistant = Assistant()
 COLLECTION = os.getenv("QDRANT_COLLECTION", "que")
 EXCEL_FILE = Path("база знаний.xlsx")
@@ -73,13 +78,14 @@ async def test_assistant():
     print(response.answer)
     print(response.related_questions)
 
+
 async def get_all():
     points, next_offset = qdrant.scroll(
         collection_name=COLLECTION,
         limit=100,
         offset=0,
         with_payload=True,
-        # with_vectors=False  # при необходимости добавить векторы
+        # with_vectors=True  # при необходимости добавить векторы
     )
     print(*points, sep="\n")
     print(next_offset)

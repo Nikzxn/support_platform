@@ -41,7 +41,7 @@ class Assistant:
         qdrant_host = os.getenv("QDRANT_HOST", "qdrant")
         qdrant_port = os.getenv("QDRANT_PORT", "6333")
         qdrant_url = os.getenv("QDRANT_URL", f"http://{qdrant_host}:{qdrant_port}")
-        use_memory_qdrant = os.getenv("QDRANT_IN_MEMORY") == "1"
+        use_memory_qdrant = os.getenv("QDRANT_IN_MEMORY", False) == "1"
 
         self.__qdrant = QdrantClient(":memory:") if use_memory_qdrant else QdrantClient(url=qdrant_url)
         self.__collection = os.getenv("QDRANT_COLLECTION", "que")
@@ -113,6 +113,7 @@ class Assistant:
                 ),
                 ssl=False
             )
+            # print(response.status, await response.json())
             return (await response.json())["data"][0]["embedding"]
 
     @authorized
