@@ -2,5 +2,4 @@
 .venv
 __pycache__
 tmp.py
-*.xlsx
 .env
